@@ -46,6 +46,42 @@ router.post("/", async (req, res) => {
     res.status(201).json({ success: true, message: "User registered successfully!", token });
 });
 
+router.post("/login", async (req, res) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({
+            success: false,
+            message: "Username and password are required!"
+        });
+    };
+
+    const user = await User.findOne({ username });
+
+    if (!user) {
+        return res.status(401).json({
+            success: false,
+            message: "Invalid credentials!"
+        });
+    };
+
+    const validPassword = await bcrypt.compare(password, user.password);
+
+    if (!validPassword) {
+        return res.status(401).json({
+            success: false,
+            message: "Invalid credentials!"
+        });
+    };
+
+    const token = generateToken({
+        _id: user.id,
+        username: user.username
+    });
+
+    res.json(token);
+});
+
 const generateToken = (data) => {
     return jwt.sign(data, process.env.JWT_KEY);
 }
