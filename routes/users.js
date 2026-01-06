@@ -105,6 +105,64 @@ router.post("/login", async (req, res) => {
     res.json(accessToken);
 });
 
+router.post("/refresh", async (req, res) => {
+    const userRefreshToken = req.cookies.refreshToken;
+
+    if (!userRefreshToken) {
+        return res.status(401).json({
+            success: false,
+            message: "No refresh token provided!"
+        });
+    };
+
+    let decodedUser;
+
+    try {
+        decodedUser = jwt.verify(userRefreshToken, process.env.REFRESH_JWT_KEY);
+    } catch (error) {
+        return res.status(403).json({
+            success: false,
+            message: "Invalid refresh token!"
+        });
+    };
+
+    const user = await User.findById(decodedUser._id);
+
+    if (!user) {
+        return res.status(404).json({
+            success: false,
+            message: "User not found!"
+        });
+    };
+
+    const isValid = await bcrypt.compare(userRefreshToken, user.refreshToken);
+
+    if (!isValid) {
+        return res.status(403).json({
+            success: false,
+            message: "Refresh token is not valid!"
+        });
+    };
+
+    const { accessToken, refreshToken } = generateTokens({
+        _id: user.id,
+        username: user.username
+    });
+    
+    const newHashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    user.refreshToken = newHashedRefreshToken;
+    await user.save();
+
+    res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: false, // TODO: change to true when it is in production
+        sameSite: "none",
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+
+    res.json(accessToken);
+});
+
 router.get("/", authMiddleware, async (req, res) => {
     const user = await User.findById(req.user._id).select("-password");
 
