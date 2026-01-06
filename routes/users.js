@@ -163,6 +163,53 @@ router.post("/refresh", async (req, res) => {
     res.json(accessToken);
 });
 
+
+router.post("/logout", async (req, res) => {
+    const userRefreshToken = req.cookies.refreshToken;
+
+    if (!userRefreshToken) {
+        return res.status(401).json({
+            success: false,
+            message: "No refresh token provided!"
+        });
+    };
+
+    let decodedUser;
+
+    try {
+        decodedUser = jwt.verify(userRefreshToken, process.env.REFRESH_JWT_KEY);
+    } catch (error) {
+        return res.status(403).json({
+            success: false,
+            message: "Invalid refresh token!"
+        });
+    };
+
+    const user = await User.findById(decodedUser._id);
+
+    if (!user) {
+        return res.status(404).json({
+            status: false,
+            message: "User not found!"
+        });
+    };
+
+    user.refreshToken = null;
+    await user.save();
+
+    res.clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: false, // TODO: change to true when it is in production
+        sameSite: "none",
+        maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+    });
+
+    res.json({
+        success: true,
+        message: "Logged out successfully!"
+    });
+});
+
 router.get("/", authMiddleware, async (req, res) => {
     const user = await User.findById(req.user._id).select("-password");
 
