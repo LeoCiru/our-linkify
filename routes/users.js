@@ -39,12 +39,23 @@ router.post("/", async (req, res) => {
 
     console.log(newUser);
 
-    const token = generateToken({
+    const { accessToken, refreshToken } = generateTokens({
         _id: newUser._id,
         username: newUser.username
     });
 
-    res.status(201).json({ success: true, message: "User registered successfully!", token });
+    const newHashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    newUser.refreshToken = newHashedRefreshToken;
+    await newUser.save();
+
+    res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: false, // TODO: change to true when it is in production
+        sameSite: "none",
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+
+    res.status(201).json({ success: true, message: "User registered successfully!", accessToken });
 });
 
 router.post("/login", async (req, res) => {
@@ -75,12 +86,23 @@ router.post("/login", async (req, res) => {
         });
     };
 
-    const token = generateToken({
+    const { accessToken, refreshToken } = generateTokens({
         _id: user.id,
         username: user.username
     });
+    
+    const newHashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+    user.refreshToken = newHashedRefreshToken;
+    await user.save();
 
-    res.json(token);
+    res.cookie("refreshToken", refreshToken, {
+        httpOnly: true,
+        secure: false, // TODO: change to true when it is in production
+        sameSite: "none",
+        maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    });
+
+    res.json(accessToken);
 });
 
 router.get("/", authMiddleware, async (req, res) => {
@@ -96,8 +118,11 @@ router.get("/", authMiddleware, async (req, res) => {
     res.json(user);
 });
 
-const generateToken = (data) => {
-    return jwt.sign(data, process.env.JWT_KEY);
+const generateTokens = (data) => {
+    const accessToken = jwt.sign(data, process.env.JWT_KEY); // TODO: Add expiry time in production
+    const refreshToken = jwt.sign({ _id: data._id }, process.env.REFRESH_JWT_KEY, { expiresIn: "30d" });
+
+    return { accessToken, refreshToken }
 }
 
 module.exports = router;

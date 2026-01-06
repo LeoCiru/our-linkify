@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema({
     isPrivate: { type: Boolean, default: false },
     gender: { type: String, enum: ["man", "female"] },
     phoneNumber: { type: String, trim: true },
+    refreshToken: { type: String },
 });
 
 const User = mongoose.model("User", userSchema);
