@@ -12,6 +12,8 @@ const userSchema = new mongoose.Schema({
     gender: { type: String, enum: ["man", "female"] },
     phoneNumber: { type: String, trim: true },
     refreshToken: { type: String },
+    resetToken: { type: String },
+    resetTokenExpires: { type: Date },
 });
 
 const User = mongoose.model("User", userSchema);
