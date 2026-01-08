@@ -275,6 +275,73 @@ router.post("/reset-password", async (req, res) => {
     });
 });
 
+router.post("/:userId/follow", authMiddleware, async (req, res) => {
+    const userId = req.params.userId;
+    const currentUserId = req.user._id;
+
+    if (currentUserId === userId) {
+        return res.status(400).json({
+            success: false,
+            message: "You cannot follow yourself!"
+        });
+    };
+
+    const userToFollow = await User.findById(userId);
+
+    if (!userToFollow) {
+        return res.status(400).json({
+            success: false,
+            message: "User not found!"
+        });
+    };
+
+
+    const currentUser = await User.findById(currentUserId);
+
+    if (!currentUser) {
+        return res.status(400).json({
+            success: false,
+            message: "User not found!"
+        });
+    };
+
+    if (userToFollow.isPrivate) {
+        if (userToFollow.followRequests.includes(currentUserId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Follow request already sent!"
+            });
+        } else {
+            userToFollow.followRequests.push(currentUserId);
+            await userToFollow.save();
+    
+            return res.json({
+                success: true,
+                message: "Follow request sent!"
+            });
+        };
+
+    } else {
+        if (userToFollow.followers.includes(currentUserId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Already following the user!"
+            });
+        } else {
+            userToFollow.followers.push(currentUserId);
+            currentUser.following.push(userId);
+    
+            await userToFollow.save();
+            await currentUser.save();
+    
+            return res.json({
+                success: true,
+                message: "User followed successfully!"
+            });
+        }
+    };
+});
+
 const generateTokens = (data) => {
     const accessToken = jwt.sign(data, process.env.JWT_KEY); // TODO: Add expiry time in production
     const refreshToken = jwt.sign({ _id: data._id }, process.env.REFRESH_JWT_KEY, { expiresIn: "30d" });
