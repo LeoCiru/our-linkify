@@ -342,6 +342,112 @@ router.post("/:userId/follow", authMiddleware, async (req, res) => {
     };
 });
 
+router.post("/reject-request/:requesterId", authMiddleware, async (req, res) => {
+    const requesterId = req.params.requesterId;
+    const currentUserId = req.user._id;
+
+    if (currentUserId === requesterId) {
+        return res.status(400).json({
+            success: false,
+            message: "You cannot unfollow yourself!"
+        });
+    };
+
+    const requesterUser = await User.findById(requesterId);
+
+    if (!requesterUser) {
+        return res.status(400).json({
+            success: false,
+            message: "User not found!"
+        });
+    };
+
+    const currentUser = await User.findById(currentUserId);
+
+    if (!currentUser) {
+        return res.status(400).json({
+            success: false,
+            message: "User not found!"
+        });
+    };
+
+    if (!currentUser.followRequests.includes(requesterId)) {
+        return res.status(400).json({
+            success: false,
+            message: "No follow request found!"
+        });
+    };
+
+    const updatedRequests = currentUser.followRequests.filter(id => id.toString() !== requesterId);
+
+    currentUser.followRequests = updatedRequests;
+    await currentUser.save();
+
+    res.json({
+        sucess: true,
+        message: "Follow request rejected successfully!"
+    });
+});
+
+
+router.post("/accept-request/:requesterId", authMiddleware, async (req, res) => {
+    const requesterId = req.params.requesterId;
+    const currentUserId = req.user._id;
+
+    if (currentUserId === requesterId) {
+        return res.status(400).json({
+            success: false,
+            message: "You cannot follow yourself!"
+        });
+    };
+
+    const requesterUser = await User.findById(requesterId);
+
+    if (!requesterUser) {
+        return res.status(400).json({
+            success: false,
+            message: "User not found!"
+        });
+    };
+
+    const currentUser = await User.findById(currentUserId);
+
+    if (!currentUser) {
+        return res.status(400).json({
+            success: false,
+            message: "User not found!"
+        });
+    };
+
+    if (!currentUser.followRequests.includes(requesterId)) {
+        return res.status(400).json({
+            success: false,
+            message: "No follow request found!"
+        });
+    };
+
+    
+    if (currentUser.followers.includes(requesterId)) {
+        return res.status(400).json({
+            success: false,
+            message: "Follow request already accepted!"
+        });
+    };
+    
+    const updatedRequests = currentUser.followRequests.filter(id => id.toString() !== requesterId);
+
+    currentUser.followRequests = updatedRequests;
+    currentUser.followers.push(requesterId);
+    requesterUser.following.push(currentUserId);
+    await currentUser.save();
+    await requesterUser.save();
+
+    res.json({
+        sucess: true,
+        message: "Follow request accepted successfully!"
+    });
+});
+
 const generateTokens = (data) => {
     const accessToken = jwt.sign(data, process.env.JWT_KEY); // TODO: Add expiry time in production
     const refreshToken = jwt.sign({ _id: data._id }, process.env.REFRESH_JWT_KEY, { expiresIn: "30d" });
