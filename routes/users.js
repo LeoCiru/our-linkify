@@ -448,6 +448,84 @@ router.post("/accept-request/:requesterId", authMiddleware, async (req, res) => 
     });
 });
 
+router.get("/:userId/followers", authMiddleware, async (req, res) => {
+    const userId = req.params.userId;
+    const currentUserId = req.user._id;
+
+    if (currentUserId === userId) {
+        return res.status(400).json({
+            success: false,
+            message: "You cannot follow yourself!"
+        });
+    };
+
+    const user = await User.findById(userId).populate("followers", "_id username");
+
+    if (!user) {
+        return res.status(400).json({
+            success: false,
+            message: "User not found!"
+        });
+    };
+
+    const currentUser = await User.findById(currentUserId);
+
+    if (!currentUser) {
+        return res.status(400).json({
+            success: false,
+            message: "User not found!"
+        });
+    };
+
+    if (currentUser.following.includes(userId) || !user.isPrivate) {
+        res.json(user.followers);
+    } else {
+        return res.status(400).json({
+            success: false,
+            message: "You cannot get followers list - Account is private."
+        });
+    };
+});
+
+router.get("/:userId/following", authMiddleware, async (req, res) => {
+    const userId = req.params.userId;
+    const currentUserId = req.user._id;
+
+    if (currentUserId === userId) {
+        return res.status(400).json({
+            success: false,
+            message: "You cannot follow yourself!" // TODO: fix this message
+        });
+    };
+
+    const user = await User.findById(userId).populate("following", "_id username");
+
+    if (!user) {
+        return res.status(400).json({
+            success: false,
+            message: "User not found!"
+        });
+    };
+
+    const currentUser = await User.findById(currentUserId);
+
+    if (!currentUser) {
+        return res.status(400).json({
+            success: false,
+            message: "User not found!"
+        });
+    };
+
+    if (currentUser.following.includes(userId) || !user.isPrivate) {
+        res.json(user.following);
+    } else {
+        return res.status(400).json({
+            success: false,
+            message: "You cannot get followers list - Account is private."
+        });
+    };
+});
+
 const generateTokens = (data) => {
     const accessToken = jwt.sign(data, process.env.JWT_KEY); // TODO: Add expiry time in production
     const refreshToken = jwt.sign({ _id: data._id }, process.env.REFRESH_JWT_KEY, { expiresIn: "30d" });
