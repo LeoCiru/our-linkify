@@ -526,6 +526,54 @@ router.get("/:userId/following", authMiddleware, async (req, res) => {
     };
 });
 
+router.post("/:userId/unfollow", authMiddleware, async (req, res) => {
+    const userId = req.params.userId;
+    const currentUserId = req.user._id;
+
+    if (currentUserId === userId) {
+        return res.status(400).json({
+            success: false,
+            message: "You cannot unfollow yourself!"
+        });
+    };
+
+    const userToUnfollow = await User.findById(userId);
+
+    if (!userToUnfollow) {
+        return res.status(400).json({
+            success: false,
+            message: "User not found!"
+        });
+    };
+
+
+    const currentUser = await User.findById(currentUserId);
+
+    if (!currentUser) {
+        return res.status(400).json({
+            success: false,
+            message: "User not found!"
+        });
+    };
+
+    if (!userToUnfollow.followers.includes(currentUserId)) {
+        return res.status(400).json({
+            success: false,
+            message: "User is not available in the followers"
+        });
+    };
+
+    userToUnfollow.followers = userToUnfollow.followers.filter(id => id.toString() !== currentUserId);
+    currentUser.following = currentUser.following.filter(id =>  id.toString() !== userId);
+    await userToUnfollow.save();
+    await currentUser.save();
+
+    res.json({
+        success: true,
+        message: "User unfollowed successfully!"
+    });
+});
+
 const generateTokens = (data) => {
     const accessToken = jwt.sign(data, process.env.JWT_KEY); // TODO: Add expiry time in production
     const refreshToken = jwt.sign({ _id: data._id }, process.env.REFRESH_JWT_KEY, { expiresIn: "30d" });
