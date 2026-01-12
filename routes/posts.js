@@ -57,4 +57,35 @@ router.get("/myposts", authMiddleware, async (req, res) => {
     });
 });
 
+router.get("/following", authMiddleware, async (req, res) => {
+    let { page = 1, limit = 10, cursor } = req.query;
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    const user = await User.findById(req.user._id).select("following");
+
+    let query = { user: { $in: user.following } }
+    
+    if (cursor) {
+        query.createdAt = { $lt: new Date(cursor) };
+    }
+
+    const posts = await Post.find(query)
+                            .populate("user", "_id username profileName")
+                            .sort({ createdAt: -1 })
+                            .skip((page - 1) * limit)
+                            .limit(limit)
+                            // TODO: add .lean()
+
+    const nextCursor = posts.length > 0 ? posts[posts.length - 1].createdAt : null;
+    const hasNextPage = posts.length === limit ? true : false;
+
+    res.json({
+        success: true,
+        posts,
+        nextCursor,
+        hasNextPage
+    });
+});
+
 module.exports = router;
