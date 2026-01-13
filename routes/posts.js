@@ -152,4 +152,30 @@ router.patch("/:postId", authMiddleware, async (req, res) => {
     });
 });
 
+router.post("/:postId/comments", authMiddleware, async (req, res) => {
+    const postId = req.params.postId;
+    const userId = req.user._id;
+    const text = req.body.text;
+
+    if (!text) {
+        return res.status(400).json({
+            success: false,
+            message: "Comment text is required!"
+        });
+    };
+
+    const newComment = {
+        user: userId,
+        text: text
+    };
+
+    const post = await Post.findByIdAndUpdate(postId, { $push: { comments: newComment } }, { new: true });
+
+    res.status(201).json({
+        success: true,
+        message: "Comment added successfully!",
+        comment: post.comments[post.comments.length - 1]
+    });
+});
+
 module.exports = router;
