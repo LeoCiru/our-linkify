@@ -178,4 +178,33 @@ router.post("/:postId/comments", authMiddleware, async (req, res) => {
     });
 });
 
+router.post("/:postId/comments/:commentId/replies", authMiddleware, async (req, res) => {
+    const postId = req.params.postId;
+    const commentId = req.params.commentId;
+    const userId = req.user._id;
+    const text = req.body.text;
+
+    if (!text) {
+        return res.status(400).json({
+            success: false,
+            message: "Comment text is required!"
+        });
+    };
+
+    const newReply = {
+        user: userId,
+        text: text
+    };
+
+    const post = await Post.findOneAndUpdate({_id: postId, "comments._id": commentId}, { $push: { "comments.$.replies": newReply } }, { new: true });
+
+    const comment = post.comments.id(commentId) // .id() is a method of Mongoose
+
+    res.status(201).json({
+        success: true,
+        message: "Reply added successfully!",
+        reply: comment.replies[comment.replies.length - 1]
+    });
+});
+
 module.exports = router;
