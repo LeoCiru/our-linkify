@@ -207,4 +207,35 @@ router.post("/:postId/comments/:commentId/replies", authMiddleware, async (req, 
     });
 });
 
+router.delete("/:postId/comments/:commentId", authMiddleware, async (req, res) => {
+    const postId = req.params.postId;
+    const commentId = req.params.commentId;
+    const userId = req.user._id;
+    
+    const post = await Post.findOneAndUpdate(
+        {
+            _id: postId,
+            $or: [
+                { user: userId }, 
+                { "comments._id": commentId, "comments.user": userId }
+            ],
+        },
+        { $pull: { comments: { _id: commentId } } },
+        { new: true }
+    );
+
+    if (!post) {
+        return res.status(403).json({
+            success: false,
+            message: "Unauthorized or post/comment not found!"
+        });
+    };
+
+    res.json({
+        success: true,
+        message: "Comment deleted successfully!",
+        comments: post.comments,
+    });
+});
+
 module.exports = router;
