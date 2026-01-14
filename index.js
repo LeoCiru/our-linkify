@@ -6,6 +6,7 @@ const mongoose = require("mongoose");
 
 const userRoutes = require("./routes/users");
 const postRoutes = require("./routes/posts");
+const chatRoutes = require("./routes/chats");
 
 const logger = require("./config/logger")
 
@@ -28,6 +29,7 @@ app.use(cookieParser());
 
 app.use("/api/user", userRoutes);
 app.use("/api/posts/", postRoutes);
+app.use("/api/chats", chatRoutes);
 
 app.use((error, req, res, next) => {
     console.log(error);
