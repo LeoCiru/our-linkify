@@ -1,5 +1,6 @@
 const authMiddleware = require("../middlewares/authMiddleware");
 const Chat = require("../models/chats");
+const Message = require("../models/messages");
 
 const router = require("express").Router();
 
@@ -22,6 +23,30 @@ router.get("/", authMiddleware, async (req, res) => {
         success: true,
         chats
     });
-})
+});
+
+router.get("/:chatId/messages", authMiddleware, async (req, res) => {
+    const { chatId } = req.params;
+
+    let { page = 1, limit = 10 } = req.query;
+    page = parseInt(page);
+    limit = parseInt(limit);
+
+    const messages = await Message.find({ chatId })
+                                    .populate("sender", "_id username")
+                                    .sort({ createdAt: -1 })
+                                    .skip((page - 1) * limit)
+                                    .limit(10)
+                                    .lean();
+
+    const hasPreviousMessages = messages.length === limit ? true : false;
+
+    res.json({
+        success: true,
+        hasPreviousMessages,
+        page,
+        limit
+    });
+});
 
 module.exports = router;
