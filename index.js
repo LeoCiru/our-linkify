@@ -27,9 +27,9 @@ app.use(cors());
 app.use(express.json());
 app.use(cookieParser());
 
-app.use("/api/user", userRoutes);
+app.use("/api/user/", userRoutes);
 app.use("/api/posts/", postRoutes);
-app.use("/api/chats", chatRoutes);
+app.use("/api/chats/", chatRoutes);
 
 app.use((error, req, res, next) => {
     console.log(error);
@@ -40,7 +40,7 @@ app.use((error, req, res, next) => {
     });
 
     return res.status(500).json({ success: false, message: "Internal Server Error!" });
-})
+});
 
 
 app.listen( PORT, () => console.log(`Server is running on port ${PORT}...`) );
