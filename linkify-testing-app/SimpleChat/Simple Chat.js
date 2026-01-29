@@ -12,7 +12,7 @@ chatFrm.addEventListener("submit", (event) => {
   event.preventDefault();
 
   socket.emit("sendMessage", {
-    sender: { _id: 123 },
+    sender: { _id: 123, username: username.value },
     content: input.value,
     createdAt: new Date(),
     status: "sent"
